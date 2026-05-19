@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VE11502期品管班線上模擬測驗版</title>
+    <title>線上模擬測驗 - 終極魔王題庫版</title>
     <style>
         :root {
             --primary: #2b6cb0;
@@ -37,7 +37,10 @@
         /* 題目列表區 */
         .container { max-width: 600px; margin: 0 auto; padding: 0 5px; }
         .quiz-card { background: white; padding: 18px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-left: 4px solid #cbd5e0; }
-        .q-title { font-weight: bold; font-size: 1.05rem; margin-bottom: 12px; line-height: 1.4; }
+        
+        /* 題目標題視覺分離 */
+        .q-title { font-size: 1.05rem; margin-bottom: 15px; line-height: 1.5; color: #2d3748; font-weight: 500; }
+        .q-num { font-size: 1.25rem; font-weight: 800; color: #1a365d; margin-right: 6px; display: inline-block; }
         
         /* 選項按鈕樣式 */
         .option-label { display: block; font-size: 0.95rem; margin: 8px 0; padding: 12px 15px; border-radius: 6px; border: 1px solid #e2e8f0; cursor: pointer; background: #fff; transition: background 0.15s; }
@@ -50,7 +53,11 @@
         .option-label.correct-target { background-color: var(--success-bg) !important; color: var(--success-text) !important; font-weight: bold; border: 1px solid var(--success-border) !important; }
         .option-label.wrong-target { background-color: var(--error-bg) !important; color: var(--error-text) !important; border: 1px solid var(--error-border) !important; }
 
-        .course-tag { font-size: 0.82rem; color: #a0aec0; font-weight: normal; background: #edf2f7; padding: 3px 8px; border-radius: 4px; }
+        /* 下方資訊標籤列（淡灰色小字化） */
+        .card-footer { display: flex; justify-content: flex-end; gap: 10px; align-items: center; margin-top: 15px; font-size: 0.8rem; color: #a0aec0; }
+        .course-tag { color: #718096; background: #edf2f7; padding: 3px 8px; border-radius: 4px; font-weight: normal; }
+        .orig-id { color: #a0aec0; font-family: monospace; }
+        
         .score-banner { background: #fffaf0; border: 2px dashed #dd6b20; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px; display: none; font-weight: bold; color: #dd6b20; font-size: 1.2rem; }
         
         /* 控制按鈕區 */
@@ -147,11 +154,10 @@
 
         function sanitizeOldHistory() {
             let history = JSON.parse(localStorage.getItem('quiz_history')) || [];
-            let needClean = history.some(h => !h || h.score === undefined || h.course === "undefined" || String(h.score).includes('undefined'));
+            let needClean = history.some(h => !h || h.score === undefined || h.course === "undefined" || String(h.score).includes('undefined') || String(h.course).includes('undefined'));
             if (needClean) { localStorage.removeItem('quiz_history'); }
         }
 
-        // 💡 修正：歷史得分面板不再與錯題數量綑綁！只要有歷史紀錄，就必須一直顯示！
         function updateHistoryUI() {
             const history = JSON.parse(localStorage.getItem('quiz_history')) || [];
             const box = document.getElementById('history-box');
@@ -175,7 +181,7 @@
             const heavyList = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
             document.getElementById('heavy-nav-btn').textContent = `🔥 常錯題庫 (${heavyList.length})`;
             
-            updateHistoryUI(); // 重新同步整理分數紀錄
+            updateHistoryUI(); 
         }
 
         function startExam(mode = 0) {
@@ -243,12 +249,15 @@
             card.id = `exam-card-${q.id}`;
 
             card.innerHTML = `
-                <div class="q-title">Q${currentQuestionIndex + 1}. No.${q.id} ${q.title}</div>
+                <div class="q-title"><span class="q-num">Q${currentQuestionIndex + 1}.</span>${q.title}</div>
                 <div class="option-label" onclick="selectOption(this, '${q.id}', 'A')">A. ${q.a}</div>
                 <div class="option-label" onclick="selectOption(this, '${q.id}', 'B')">B. ${q.b}</div>
                 <div class="option-label" onclick="selectOption(this, '${q.id}', 'C')">C. ${q.c}</div>
                 <div class="option-label" onclick="selectOption(this, '${q.id}', 'D')">D. ${q.d}</div>
-                <div style="text-align: right; margin-top: 15px;"><span class="course-tag">📌 ${q.course}</span></div>
+                <div class="card-footer">
+                    <span class="orig-id">No.${q.id}</span>
+                    <span class="course-tag">📌 ${q.course}</span>
+                </div>
             `;
             listContainer.appendChild(card);
         }
@@ -290,6 +299,7 @@
                     let stats = JSON.parse(localStorage.getItem('quiz_question_stats')) || {};
                     if (!stats[qId]) stats[qId] = { appear: 1, wrong: 0 };
                     stats[qId].wrong += 1;
+                    localStorage.setItem('quiz_checkpoint', 'pass'); 
                     localStorage.setItem('quiz_question_stats', JSON.stringify(stats));
                     
                     if (stats[qId].appear >= 3 && stats[qId].wrong >= 3) {
