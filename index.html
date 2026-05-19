@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>線上模擬測驗 - 終極魔王題庫版</title>
+    <title>VE11502期品管班線上模擬測驗版</title>
     <style>
         :root {
             --primary: #2b6cb0;
@@ -122,7 +122,6 @@
                 alert('找不到同資料夾下的 questions.js 檔案！'); return;
             }
             
-            // 💡 修正：計算各課程分類出現的次數
             const courseCounts = {};
             cleanData.forEach(q => {
                 if (q.course) {
@@ -135,7 +134,6 @@
             const select = document.getElementById('course-select');
             select.innerHTML = `<option value="all">全部課程 (${cleanData.length}題)</option>`;
             
-            // 💡 修正：產生選單時，動態將對應的題數備註進去
             courses.forEach(c => { 
                 const opt = document.createElement('option'); 
                 opt.value = c; 
@@ -153,12 +151,12 @@
             if (needClean) { localStorage.removeItem('quiz_history'); }
         }
 
+        // 💡 修正：歷史得分面板不再與錯題數量綑綁！只要有歷史紀錄，就必須一直顯示！
         function updateHistoryUI() {
             const history = JSON.parse(localStorage.getItem('quiz_history')) || [];
-            const wrongList = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
             const box = document.getElementById('history-box');
             
-            if (history.length === 0 || wrongList.length === 0) {
+            if (history.length === 0) {
                 box.style.display = 'none'; 
             } else {
                 box.style.display = 'block'; 
@@ -177,7 +175,7 @@
             const heavyList = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
             document.getElementById('heavy-nav-btn').textContent = `🔥 常錯題庫 (${heavyList.length})`;
             
-            updateHistoryUI(); 
+            updateHistoryUI(); // 重新同步整理分數紀錄
         }
 
         function startExam(mode = 0) {
