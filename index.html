@@ -16,14 +16,18 @@
             --bg: #f7fafc;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        /* 💡 修正：預設留白高度（電腦版） */
         body { background-color: var(--bg); margin: 0; padding-top: 260px; padding-bottom: 40px; color: #2d3748; }
         
         /* 置頂固定面板 */
         .top-panel { position: fixed; top: 0; left: 0; right: 0; background: white; padding: 12px 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 1000; max-width: 600px; margin: 0 auto; }
         .top-panel h2 { margin: 0 0 8px 0; font-size: 1.2rem; color: var(--primary); text-align: center; }
-        .row { display: flex; gap: 8px; margin-bottom: 6px; }
-        select, button, input { padding: 10px; border-radius: 6px; border: 1px solid #cbd5e0; font-size: 0.95rem; font-weight: bold; }
-        select { background: white; flex: 1; }
+        
+        /* 💡 修正：增加換行控制與間距微調 */
+        .row { display: flex; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+        select, button, input { padding: 10px; border-radius: 6px; border: 1px solid #cbd5e0; font-size: 0.95rem; font-weight: bold; width: 100%; }
+        select { background: white; flex: 1; min-width: 0; } /* 防止內建爆版 */
         button { background: var(--primary); color: white; border: none; cursor: pointer; }
         button:active { opacity: 0.8; }
         
@@ -53,7 +57,7 @@
         .option-label.correct-target { background-color: var(--success-bg) !important; color: var(--success-text) !important; font-weight: bold; border: 1px solid var(--success-border) !important; }
         .option-label.wrong-target { background-color: var(--error-bg) !important; color: var(--error-text) !important; border: 1px solid var(--error-border) !important; }
 
-        /* 下方資訊標籤列（淡灰色小字化） */
+        /* 下方資訊標籤列 */
         .card-footer { display: flex; justify-content: flex-end; gap: 10px; align-items: center; margin-top: 15px; font-size: 0.8rem; color: #a0aec0; }
         .course-tag { color: #718096; background: #edf2f7; padding: 3px 8px; border-radius: 4px; font-weight: normal; }
         .orig-id { color: #a0aec0; font-family: monospace; }
@@ -64,6 +68,24 @@
         .control-row { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
         .btn-next { background: #48bb78; font-size: 1.1rem; width: 100%; display: none; padding: 12px; }
         .btn-abandon { background: #718096; font-size: 0.95rem; width: 100%; display: none; padding: 10px; }
+
+        /* ========================================================
+           📱 🚀 RWD 行動裝置專用響應式修正 (螢幕寬度 500px 以下)
+           ======================================================== */
+        @media (max-width: 500px) {
+            /* 讓上方推擠距離變大，因為下拉選單變兩列上下排了 */
+            body { padding-top: 310px; }
+            
+            /* 分類選單與題數選單拆開，改為各自 100% 滿版，字體就不會被壓縮 */
+            .row:nth-child(2) { flex-direction: column; gap: 6px; }
+            .row:nth-child(2) select { width: 100%; flex: none; }
+            
+            /* 按鈕文字在極小螢幕下適度縮小防止換行錯位 */
+            button { font-size: 0.85rem; padding: 10px 4px; }
+            
+            /* 歷史得分紀錄縮小一點，避免手機版太佔位 */
+            .history-box { font-size: 0.8rem; padding: 6px; }
+        }
     </style>
 </head>
 <body>
@@ -229,7 +251,9 @@
 
             renderCurrentQuestion();
             document.getElementById('abandon-btn').style.display = 'block'; 
-            window.scrollTo(0, 230);
+            
+            // 💡 修正：因應手機版面板變高，滾動對齊錨點微調至 290
+            window.scrollTo(0, 290);
         }
 
         function renderCurrentQuestion() {
@@ -371,7 +395,7 @@
             if (examMode === 1) modeText = "⚠️ 錯題複習";
             if (examMode === 2) modeText = "🔥 常錯題庫";
             document.getElementById('panel-title').textContent = `${modeText} (已結束)`;
-            window.scrollTo(0, 230);
+            window.scrollTo(0, 290);
         }
     </script>
 </body>
