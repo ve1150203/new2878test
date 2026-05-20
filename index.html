@@ -210,13 +210,13 @@
             userAnswers = {};
             currentQuestionIndex = 0;
 
-            if (examMode === 1) { 
-                const wrongIds = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
-                if (wrongIds.length === 0) { alert('目前沒有錯題可以複習喔！'); return; }
-                let basePool = cleanData.filter(q => wrongIds.includes(String(q.id)));
-                if (selectedCourse !== 'all') basePool = basePool.filter(q => q.course === selectedCourse);
-                if (basePool.length === 0) { alert('此分類下無錯題！'); return; }
-                examQuestions = shuffle([...basePool]);
+if (examMode === 1) { 
+    const wrongIds = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
+    if (wrongIds.length === 0) { alert('目前沒有錯題可以複習喔！'); return; }
+    let basePool = cleanData.filter(q => wrongIds.includes(String(q.id)));
+    /* 💡 已移除課程限制，不再受下拉選單影響 */
+    if (basePool.length === 0) { alert('目前沒有錯題可以複習喔！'); return; }
+    examQuestions = shuffle([...basePool]);
             } 
             else if (examMode === 2) { 
                 const heavyIds = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
