@@ -60,7 +60,7 @@
         
         .score-banner { background: #fffaf0; border: 2px dashed #dd6b20; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px; display: none; font-weight: bold; color: #dd6b20; font-size: 1.2rem; }
         
-        .control-row { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .control-row { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; padding-bottom: 20px; }
         .btn-next { background: #48bb78; font-size: 1.1rem; width: 100%; display: none; padding: 12px; }
         .btn-abandon { background: #718096; font-size: 0.95rem; width: 100%; display: none; padding: 10px; }
 
@@ -68,7 +68,6 @@
            📱 🚀 RWD 行動裝置專用響應式修正 (螢幕寬度 500px 以下)
            ======================================================== */
         @media (max-width: 500px) {
-            /* 💡 徹底解決手機遮擋：加大頂部安全緩衝至 340px */
             body { padding-top: 250px; }
             
             .row:nth-child(2) { flex-direction: column; gap: 6px; }
@@ -76,8 +75,8 @@
             
             button { font-size: 0.85rem; padding: 10px 4px; }
             
-	   .quiz-card { margin-top: 5px; margin-bottom: 20px; }
-    	   .history-box { font-size: 0.8rem; padding: 6px; }
+            .quiz-card { margin-top: 5px; margin-bottom: 20px; }
+            .history-box { font-size: 0.8rem; padding: 6px; }
         }
     </style>
 </head>
@@ -210,20 +209,20 @@
             userAnswers = {};
             currentQuestionIndex = 0;
 
-if (examMode === 1) { 
-    const wrongIds = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
-    if (wrongIds.length === 0) { alert('目前沒有錯題可以複習喔！'); return; }
-    let basePool = cleanData.filter(q => wrongIds.includes(String(q.id)));
-    /* 💡 已移除課程限制，不再受下拉選單影響 */
-    if (basePool.length === 0) { alert('目前沒有錯題可以複習喔！'); return; }
-    examQuestions = shuffle([...basePool]);
+            if (examMode === 1) { 
+                const wrongIds = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
+                if (wrongIds.length === 0) { alert('目前沒有錯題可以複習喔！'); return; }
+                let basePool = cleanData.filter(q => wrongIds.includes(String(q.id)));
+                /* 💡 修正：已移除課程限制 */
+                if (basePool.length === 0) { alert('目前沒有錯題可以複習喔！'); return; }
+                examQuestions = shuffle([...basePool]);
             } 
             else if (examMode === 2) { 
                 const heavyIds = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
                 if (heavyIds.length === 0) { alert('常錯題庫目前空空如也！代表還沒有出現連續錯3次的魔王題喔！'); return; }
                 let basePool = cleanData.filter(q => heavyIds.includes(String(q.id)));
-                if (selectedCourse !== 'all') basePool = basePool.filter(q => q.course === selectedCourse);
-                if (basePool.length === 0) { alert('此分類下無常錯大魔王題！'); return; }
+                /* 💡 修正：徹底移除常錯題庫的課程限制，不再受 selectedCourse 綁定 */
+                if (basePool.length === 0) { alert('常錯題庫目前沒有題目喔！'); return; }
                 examQuestions = shuffle([...basePool]); 
             } 
             else { 
@@ -236,8 +235,6 @@ if (examMode === 1) {
 
             renderCurrentQuestion();
             document.getElementById('abandon-btn').style.display = 'block'; 
-            
-            window.scrollTo(0, 0);
         }
 
         function renderCurrentQuestion() {
@@ -268,6 +265,15 @@ if (examMode === 1) {
                 </div>
             `;
             listContainer.appendChild(card);
+
+            /* 💡 修正手機工具列遮擋：每當新題目產生時，自動精確滾動對齊到頂部面板下方 */
+            setTimeout(() => {
+                const panelHeight = document.querySelector('.top-panel').offsetHeight;
+                window.scrollTo({
+                    top: panelHeight - 10,
+                    behavior: 'smooth'
+                });
+            }, 50);
         }
 
         function selectOption(element, qId, chosenOpt) {
@@ -342,7 +348,6 @@ if (examMode === 1) {
             const totalQuestions = examQuestions.length;
             const score = correctCount;
 
-            /* 💡 修正：嚴格判定只有當「正常測驗 (examMode === 0)」且有作答時才寫入歷史紀錄，錯題/常錯複習不呈現！ */
             if (examMode === 0 && totalAnswered > 0) {
                 const selectedCourse = document.getElementById('course-select').value;
                 let history = JSON.parse(localStorage.getItem('quiz_history')) || [];
@@ -378,7 +383,9 @@ if (examMode === 1) {
             if (examMode === 1) modeText = "⚠️ 錯題複習";
             if (examMode === 2) modeText = "🔥 常錯題庫";
             document.getElementById('panel-title').textContent = `${modeText} (已結束)`;
-            window.scrollTo(0, 0);
+            
+            /* 💡 結束時平滑回滾至最上方查看分數 */
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
 </body>
