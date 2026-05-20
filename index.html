@@ -228,7 +228,7 @@
             } 
             else if (examMode === 2) { 
                 const heavyIds = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
-                if (heavyIds.length === 0) { alert('常錯題庫目前空空如也！代表還沒有出現3次且錯3次以上的魔王題喔！'); return; }
+                if (heavyIds.length === 0) { alert('常錯題庫目前空空如也！代表還沒有出現連續錯3次的魔王題喔！'); return; }
                 let basePool = cleanData.filter(q => heavyIds.includes(String(q.id)));
                 if (selectedCourse !== 'all') basePool = basePool.filter(q => q.course === selectedCourse);
                 if (basePool.length === 0) { alert('此分類下無常錯大魔王題！'); return; }
@@ -238,13 +238,6 @@
                 let basePool = selectedCourse === 'all' ? cleanData : cleanData.filter(q => q.course === selectedCourse);
                 let shuffledPool = shuffle([...basePool]);
                 examQuestions = shuffledPool.slice(0, Math.min(amount, shuffledPool.length));
-
-                let stats = JSON.parse(localStorage.getItem('quiz_question_stats')) || {};
-                examQuestions.forEach(q => {
-                    if (!stats[q.id]) stats[q.id] = { appear: 0, wrong: 0 };
-                    stats[q.id].appear += 1;
-                });
-                localStorage.setItem('quiz_question_stats', JSON.stringify(stats));
             }
 
             if (examQuestions.length === 0) { alert('無可抽取的題目！'); return; }
@@ -300,41 +293,46 @@
             const labels = card.getElementsByClassName('option-label');
             const optMap = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
 
+            // 讀取計數器：wrong_streak_stats 用來存每題的【連續錯誤次數】
+            let streakStats = JSON.parse(localStorage.getItem('quiz_wrong_streak_stats')) || {};
+            if (!streakStats[qId]) streakStats[qId] = 0;
+
             if (isCorrect) {
                 element.classList.add('correct-target');
                 
-                if (examMode === 1) {
-                    let currentWrongList = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
-                    currentWrongList = currentWrongList.filter(id => String(id) !== String(qId));
-                    localStorage.setItem('quiz_wrong_list', JSON.stringify(currentWrongList));
-                    updateReviewButtonCount();
-                }
+                // 答對邏輯：連續錯誤計數器歸零重置
+                streakStats[qId] = 0;
+                localStorage.setItem('quiz_wrong_streak_stats', JSON.stringify(streakStats));
+
+                // 錯題複習模式下答對：該題直接從錯題本消失
+                let currentWrongList = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
+                currentWrongList = currentWrongList.filter(id => String(id) !== String(qId));
+                localStorage.setItem('quiz_wrong_list', JSON.stringify(currentWrongList));
+                updateReviewButtonCount();
             } else {
                 element.classList.add('wrong-target'); 
                 labels[optMap[correctOpt]].classList.add('correct-target'); 
                 
-                if (examMode === 0) {
-                    let currentWrongList = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
-                    if (!currentWrongList.includes(String(qId))) {
-                        currentWrongList.push(String(qId));
-                        localStorage.setItem('quiz_wrong_list', JSON.stringify(currentWrongList));
-                    }
-                    
-                    let stats = JSON.parse(localStorage.getItem('quiz_question_stats')) || {};
-                    if (!stats[qId]) stats[qId] = { appear: 1, wrong: 0 };
-                    stats[qId].wrong += 1;
-                    localStorage.setItem('quiz_checkpoint', 'pass'); 
-                    localStorage.setItem('quiz_question_stats', JSON.stringify(stats));
-                    
-                    if (stats[qId].appear >= 3 && stats[qId].wrong >= 3) {
-                        let heavyList = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
-                        if (!heavyList.includes(String(qId))) {
-                            heavyList.push(String(qId));
-                            localStorage.setItem('quiz_heavy_wrong_list', JSON.stringify(heavyList));
-                        }
-                    }
-                    updateReviewButtonCount();
+                // 答錯邏輯：無論哪種模式答錯，都先塞入錯題本
+                let currentWrongList = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
+                if (!currentWrongList.includes(String(qId))) {
+                    currentWrongList.push(String(qId));
+                    localStorage.setItem('quiz_wrong_list', JSON.stringify(currentWrongList));
                 }
+                
+                // 連續錯誤計數器增加
+                streakStats[qId] += 1;
+                localStorage.setItem('quiz_wrong_streak_stats', JSON.stringify(streakStats));
+                
+                // 連續答錯 3 次：寫入常錯題庫（只進不出，沒有任何 filter 移除代碼）
+                if (streakStats[qId] >= 3) {
+                    let heavyList = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
+                    if (!heavyList.includes(String(qId))) {
+                        heavyList.push(String(qId));
+                        localStorage.setItem('quiz_heavy_wrong_list', JSON.stringify(heavyList));
+                    }
+                }
+                updateReviewButtonCount();
             }
 
             document.getElementById('next-btn').style.display = 'block'; 
@@ -360,7 +358,8 @@
             const totalQuestions = examQuestions.length;
             const score = correctCount;
 
-            if (examMode === 0 && totalAnswered > 0) {
+            // 💡 修正：任何時候只要有作答，結算就立刻儲存歷史紀錄，不再形同虛設
+            if (totalAnswered > 0) {
                 const selectedCourse = document.getElementById('course-select').value;
                 let history = JSON.parse(localStorage.getItem('quiz_history')) || [];
                 history.unshift({
