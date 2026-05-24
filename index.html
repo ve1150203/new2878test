@@ -81,6 +81,9 @@
         .orig-id { color: #a0aec0; font-family: monospace; font-weight: bold; display: flex; align-items: center; }
         .stat-tag { color: #718096; font-weight: bold; background: #f7fafc; border: 1px dashed #cbd5e0; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
         
+        /* 👹 魔王留底歷史累計標籤 */
+        .demon-tag { color: #e53e3e; font-weight: bold; background: #fff5f5; border: 1px dashed #fed7d7; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+
         .score-banner { background: #fffaf0; border: 2px dashed #dd6b20; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px; display: none; font-weight: bold; color: #dd6b20; font-size: 1.1rem; }
         
         .bottom-panel {
@@ -119,7 +122,7 @@
         <div class="row">
             <button class="btn-start" onclick="startExam(0)">🚀 開始</button>
             <button id="review-nav-btn" class="btn-review" onclick="startExam(1)">⚠️ 錯題 (0)</button>
-            <button id="heavy-nav-btn" class="btn-heavy-wrong" onclick="startExam(2)">🔥 常錯題庫 (0)</button>
+            <button id="heavy-nav-btn" class="btn-heavy-wrong" onclick="startExam(2)">🔥 魔王 (0)</button>
         </div>
         <div class="history-box" id="history-box"></div>
     </div>
@@ -268,7 +271,6 @@
                 let shuffledPool = shuffle([...basePool]);
                 examQuestions = shuffledPool.slice(0, Math.min(amount, shuffledPool.length));
 
-                // 💡 只有在隨機測驗（Mode 0）時，才在抽題當下累加常錯題庫判定專用的內部計數
                 let stats = JSON.parse(localStorage.getItem('quiz_question_stats')) || {};
                 examQuestions.forEach(q => {
                     let pId = getPureId(q.id);
@@ -280,7 +282,7 @@
 
             if (examQuestions.length === 0) { alert('無可抽取的題目！'); return; }
 
-            renderCurrentQuestion();
+            renderQuestions(); 
             document.getElementById('abandon-btn').style.display = 'block'; 
         }
 
@@ -295,46 +297,61 @@
             return `出現 0 次，正確率 0%`;
         }
 
-        function renderCurrentQuestion() {
+        function getDemonHistoryText(pureId) {
+            let log = JSON.parse(localStorage.getItem('quiz_demon_master_log')) || {};
+            if (log[pureId] && log[pureId].historyCount > 0) {
+                return `👹 曾入魔王題：${log[pureId].historyCount} 次`;
+            }
+            return '';
+        }
+
+        function renderQuestions() {
             const listContainer = document.getElementById('quiz-list');
             listContainer.innerHTML = '';
-            document.getElementById('next-btn').style.display = 'none'; 
+
+            examQuestions.forEach((q, idx) => {
+                let pId = getPureId(q.id);
+                const card = document.createElement('div');
+                card.className = 'quiz-card';
+                card.id = `exam-card-${pId}`;
+                
+                // 完美保留你原始的一頁一題隱藏顯示機制
+                if (idx > 0) {
+                    card.style.display = 'none';
+                }
+
+                const statText = getEachQuestionStatsText(pId);
+                const demonText = getDemonHistoryText(pId);
+
+                card.innerHTML = `
+                    <div class="q-title"><span class="q-num">Q${idx + 1}.</span>${q.title}</div>
+                    <div class="option-label" onclick="selectOption(this, '${pId}', 'A', ${idx})">${q.a}</div>
+                    <div class="option-label" onclick="selectOption(this, '${pId}', 'B', ${idx})">${q.b}</div>
+                    <div class="option-label" onclick="selectOption(this, '${pId}', 'C', ${idx})">${q.c}</div>
+                    <div class="option-label" onclick="selectOption(this, '${pId}', 'D', ${idx})">${q.d}</div>
+                    <div class="card-footer">
+                        <div class="footer-left">
+                            <span class="orig-id">No. ${q.id}</span>
+                            <span class="course-tag">📌 ${q.course}</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                            <div class="stat-tag" id="stat-tag-${pId}">📊 ${statText}</div>
+                            ${demonText ? `<div class="demon-tag" id="demon-tag-${pId}">${demonText}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
 
             let modeText = "📝 模擬測驗";
             if (examMode === 1) modeText = "⚠️ 錯題複習";
             if (examMode === 2) modeText = "🔥 常錯題庫";
-            
-            document.getElementById('panel-title').textContent = `${modeText} (${currentQuestionIndex + 1}/${examQuestions.length})`;
-
-            const q = examQuestions[currentQuestionIndex];
-            const card = document.createElement('div');
-            card.className = 'quiz-card';
-            
-            let pId = getPureId(q.id);
-            card.id = `exam-card-${pId}`;
-
-            const statText = getEachQuestionStatsText(pId);
-
-            card.innerHTML = `
-                <div class="q-title"><span class="q-num">Q${currentQuestionIndex + 1}.</span>${q.title}</div>
-                <div class="option-label" onclick="selectOption(this, '${pId}', 'A')">${q.a}</div>
-                <div class="option-label" onclick="selectOption(this, '${pId}', 'B')">${q.b}</div>
-                <div class="option-label" onclick="selectOption(this, '${pId}', 'C')">${q.c}</div>
-                <div class="option-label" onclick="selectOption(this, '${pId}', 'D')">${q.d}</div>
-                <div class="card-footer">
-                    <div class="footer-left">
-                        <span class="orig-id">No. ${q.id}</span>
-                        <span class="course-tag">📌 ${q.course}</span>
-                    </div>
-                    <div class="stat-tag" id="stat-tag-${pId}">📊 ${statText}</div>
-                </div>
-            `;
-            listContainer.appendChild(card);
+            document.getElementById('panel-title').textContent = `${modeText} (1/${examQuestions.length})`;
 
             document.querySelector('.main-content').scrollTop = 0;
         }
 
-        function selectOption(element, pId, chosenOpt) {
+        function selectOption(element, pId, chosenOpt, idx) {
             const card = document.getElementById(`exam-card-${pId}`);
             if (card.classList.contains('answered')) return; 
             card.classList.add('answered'); 
@@ -345,7 +362,13 @@
 
             userAnswers[pId] = { chosen: chosenOpt, isCorrect: isCorrect };
 
-            // 💡 核心邏輯修正：只有在隨機測驗（examMode === 0）時，作答才累積「出現次數與正確率」
+            let demonLog = JSON.parse(localStorage.getItem('quiz_demon_master_log')) || {};
+            let heavyList = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
+
+            if (!demonLog[pId]) {
+                demonLog[pId] = { continuousWrong: 0, continuousRight: 0, historyCount: 0 };
+            }
+
             if (examMode === 0) {
                 let eachStats = JSON.parse(localStorage.getItem('quiz_each_question_stats')) || {};
                 if (!eachStats[pId]) eachStats[pId] = { appear: 0, correct: 0 };
@@ -353,8 +376,7 @@
                 if (isCorrect) { eachStats[pId].correct += 1; }
                 localStorage.setItem('quiz_each_question_stats', JSON.stringify(eachStats));
 
-                // 隨機測驗時，即時渲染更新小標籤
-                const statTag = document.getElementById(`stat-tag-${pId}`);
+                const statTag = document.getElementById('stat-tag-' + pId);
                 if (statTag) { statTag.textContent = `📊 ${getEachQuestionStatsText(pId)}`; }
             }
 
@@ -363,11 +385,25 @@
 
             if (isCorrect) {
                 element.classList.add('correct-target');
+                
                 if (examMode === 1) {
                     let currentWrongList = JSON.parse(localStorage.getItem('quiz_wrong_list')) || [];
                     currentWrongList = currentWrongList.filter(id => String(id) !== String(pId));
                     localStorage.setItem('quiz_wrong_list', JSON.stringify(currentWrongList));
-                    updateReviewButtonCount();
+                }
+
+                if (examMode === 0) {
+                    demonLog[pId].continuousWrong = 0; 
+
+                    if (heavyList.includes(String(pId))) {
+                        demonLog[pId].continuousRight = (demonLog[pId].continuousRight || 0) + 1;
+                        
+                        if (demonLog[pId].continuousRight >= 5) {
+                            heavyList = heavyList.filter(id => String(id) !== String(pId));
+                            localStorage.setItem('quiz_heavy_wrong_list', JSON.stringify(heavyList));
+                            demonLog[pId].continuousRight = 0; 
+                        }
+                    }
                 }
             } else {
                 element.classList.add('wrong-target'); 
@@ -384,25 +420,48 @@
                     if (!stats[pId]) stats[pId] = { appear: 1, wrong: 0 };
                     stats[pId].wrong += 1;
                     localStorage.setItem('quiz_question_stats', JSON.stringify(stats));
-                    
-                    if (stats[pId].appear >= 3 && stats[pId].wrong >= 3) {
-                        let heavyList = JSON.parse(localStorage.getItem('quiz_heavy_wrong_list')) || [];
-                        if (!heavyList.includes(String(pId))) {
+
+                    demonLog[pId].continuousRight = 0; 
+
+                    if (!heavyList.includes(String(pId)) && demonLog[pId].historyCount > 0) {
+                        heavyList.push(String(pId)); 
+                        demonLog[pId].historyCount += 1; 
+                        demonLog[pId].continuousWrong = 0;
+                    } 
+                    else if (!heavyList.includes(String(pId))) {
+                        demonLog[pId].continuousWrong = (demonLog[pId].continuousWrong || 0) + 1;
+                        if (demonLog[pId].continuousWrong >= 3) {
                             heavyList.push(String(pId));
-                            localStorage.setItem('quiz_heavy_wrong_list', JSON.stringify(heavyList));
+                            demonLog[pId].historyCount += 1; 
+                            demonLog[pId].continuousWrong = 0;
                         }
                     }
-                    updateReviewButtonCount();
+                    
+                    localStorage.setItem('quiz_heavy_wrong_list', JSON.stringify(heavyList));
                 }
             }
+
+            localStorage.setItem('quiz_demon_master_log', JSON.stringify(demonLog));
+            updateReviewButtonCount(); 
 
             document.getElementById('next-btn').style.display = 'block'; 
         }
 
+        // 🌟 完美還原你最原始的單頁 display = 'none' / 'block' 切換法，絕無滾動！
         function nextQuestion() {
             if (currentQuestionIndex < examQuestions.length - 1) {
                 currentQuestionIndex++;
-                renderCurrentQuestion();
+                
+                let modeText = "📝 模擬測驗";
+                if (examMode === 1) modeText = "⚠️ 錯題複習";
+                if (examMode === 2) modeText = "🔥 常錯題庫";
+                document.getElementById('panel-title').textContent = `${modeText} (${currentQuestionIndex + 1}/${examQuestions.length})`;
+
+                // 完完全全你原本的寫法：上一題設為 none，當前題設為 block，畫面乾淨切換
+                document.getElementById(`exam-card-${getPureId(examQuestions[currentQuestionIndex-1].id)}`).style.display = 'none';
+                document.getElementById(`exam-card-${getPureId(examQuestions[currentQuestionIndex].id)}`).style.display = 'block';
+                
+                document.getElementById('next-btn').style.display = 'none';
             } else {
                 submitExam(false); 
             }
